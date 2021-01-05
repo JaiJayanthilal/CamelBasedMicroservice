@@ -1,0 +1,77 @@
+---
+swagger: "2.0"
+basePath: /api/1.0
+info:
+  description: ""
+  title: ""
+  version: ""
+paths: {}
+definitions:
+  TransactionControllerModel: 
+    properties: 
+      businessProcessCode: 
+        description: businessProcessCode
+        maxLength: 16
+        minLength: 0
+        type: string
+      businessProductCode: 
+        description: businessProductCode
+        maxLength: 16
+        minLength: 0
+        type: string
+      lifeCycleCode: 
+        description: lifeCycleCode
+        type: string
+      processCode: 
+        description: processCode
+        maxLength: 20
+        minLength: 0
+        type: string
+      referenceNumber: 
+        description: "Reference Number"
+        type: string
+      tasks: 
+        description: tasks
+        items: 
+          $ref: "#/definitions/EventModel"
+        type: array
+    type: object
+  StatusModel: 
+    description: StatusModel
+    properties: 
+      code: 
+        description: "Code against status to be updated"
+        type: string
+      status: 
+        $ref: "#/definitions/TransactionControllerStatus"
+    type: object
+  StatusModelCollection: 
+    description: "Collection of StatusModel."
+    properties: 
+      data: 
+        items: 
+          $ref: "#/definitions/StatusModel"
+        type: array
+    type: object
+  TransactionControllerCollection: 
+    description: "Collection of TransactionController."
+    properties: 
+      data: 
+        items: 
+          $ref: "#/definitions/TransactionControllerModel"
+        type: array
+      paging: 
+        $ref: "#/definitions/PagingDto"
+        type: object
+    type: object    
+  TransactionControllerStatus: 
+    description: TransactionControllerModel
+    enum: 
+      - INCOMPLETE
+      - COMPLETE
+      - WIP
+    type: string   
+  GenericDto:
+    type: "object"                 
+  PagingDto:
+    type: "object"     

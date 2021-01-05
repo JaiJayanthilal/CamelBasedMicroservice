@@ -1,0 +1,209 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+       http://www.springframework.org/schema/beans 
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://camel.apache.org/schema/spring 
+       http://camel.apache.org/schema/spring/camel-spring.xsd">
+    <!-- <bean id="sqlComponent" class="org.apache.camel.component.sql.SqlComponent">
+		<property name="dataSource" ref="dataSource" />
+	</bean> -->
+	<bean id="transformer" class="oracle.banking.ba.obtfpm.transformer.ObtfpmTransformer" />
+	<!-- <bean id="RestletComponent" class="org.restlet.Component" />
+	<bean id="RestletComponentService" class="org.apache.camel.component.restlet.RestletComponent">
+		<constructor-arg index="0">
+			<ref bean="RestletComponent" />
+		</constructor-arg>
+	</bean> -->
+
+	<camelContext xmlns="http://camel.apache.org/schema/spring">
+		<!-- <propertyPlaceholder id="placeholder" location="classpath:Obtfpm_SQLConfig.properties" /> -->
+		
+		
+		
+		<restConfiguration bindingMode="json" component="servlet" />
+		<rest path="/rest">
+			<post uri="/obtfpm" consumes="application/json" produces="application/json">
+				<to uri="direct:obtfpm" />
+			</post>
+			
+				<!--  put type="oracle.fsgbu.obtfpm.api.model.StatusModel">
+        			<description>Updates or transaction controller</description>
+       		 		<to uri="http://10.40.137.113:8004/cmc-transactioncontroller-services/web/v1/transactioncontroller/PK2ILCI000042530/dsstatus/fsgbu-ob-tfpm-vp-ilcimain?bridgeEndpoint=true"/>
+      			<  log message="${body}" />
+      			</put>-->
+      			
+		</rest>
+		
+		<!-- <route id="Set Header"> 
+            <from uri="direct:headerRoute" />
+            <to uri="sqlComponent:{{sql.setHeader}}" />     
+            <loop>
+                <simple>${body.size}</simple> 
+                <setHeader name="${body[${exchangeProperty.CamelLoopIndex}]['KEY']}"> 
+                    <simple>${body[${exchangeProperty.CamelLoopIndex}]['VALUE']}</simple>   
+                </setHeader>
+            </loop>
+            <to uri="mock:nowhere"/>
+        </route> -->
+		
+		<route id="obtfpm - ILCISS SUBMIT" >
+			<from uri="direct:obtfpm" />
+			<!-- {"additionalAttributes":{"uiKey":"fsgbu-ob-tfpm-ds-additional-fields@ILCISS","dataReferenceKey":"PK2ILCI000042278","fieldMetaDataVersion":"1","applicationId":"OBTFPM","fieldData":"{}"},"processCode":"ILCISS","domainId":"d2e73034-8228-4965-9ce3-8b9f8af794de","eventCode":"TFPM_FA_ILCISS_REGTN","workflowId":"93797e4f-11fe-41a9-91ca-1fa27bdc63e4","taskId":"0c8b86a3-2009-4062-9b09-b46d4017e62c","applicationCategoryCode":"ILCISS","taskOutcome":"PROCEED","overrideAccept":false,"dataSegmentName":"Main Details","dataSegmentCode":"fsgbu-ob-tfpm-vp-ilcimain","applicationNumber":"PK2ILCI000042278","hopId":"MAIN","letterOfCreditDetails":{"id":"d2e73034-8228-4965-9ce3-8b9f8af794de","applicationNumber":"PK2ILCI000042278","processCode":"ILCISS","branchCode":"PK2","limitTrackingRequired":"Y","branchName":"FLEXCUBE UNIVERSAL BANK","receivedFromApplicantBank":"N","counterpartyId":"001044","counterpartyName":"GOODCARE PLC","currencyCode":"GBP","amount":9000,"priority":"M","submissionMode":"Desk","applicationDate":"2019-03-22","counterpartyReferenceNumber":"","lcType":"","revolvingType":"N","productCode":"","formOfDocumentaryCredit":"IRREVOCABLE","documentaryCreditNumber":"","contractRefNo":"","issueDate":"2019-03-22","lcApplicableRule":"UCP LATEST VERSION","expiryDate":null,"placeOfExpiry":"","tolerence":null,"positiveTolerance":"","negativeTolerance":"","additionalAmountCovered":"","copyExtLC":"N","copyDCN":""},"partyDetails":[{"id":"","partyType":"APP","partyId":"001044","partyName":"GOODCARE PLC","swiftCode":"","addressLine1":"12 King Street","addressLine2":null,"addressLine3":null,"addressLine4":null,"city":null,"mediumType":"SWIFT","country":"GB","recordStat":"W","isPartyBlacklisted":"N","customerType":"C","isWalkin":false}],"txnCmnDetails":null} -->
+			<log message="${body}" />
+			<setProperty name="message">
+				<simple>${body}</simple>	
+			</setProperty>
+			<log message=":::::::::::::INPUTdatasegmentResponse :::" />
+			<log message="${body['letterOfCreditDetails']}" />
+			
+			<log message=":::::::After SetBody :::" />
+			<log message="${body}" />
+			<!--  log message="${datasegmentResponse}" />-->
+			<setHeader name="Content-Type">
+				<constant>application/json</constant>
+			</setHeader>
+			<setHeader name="Accept">
+				<constant>application/json</constant>
+			</setHeader>
+			<setHeader name="userId">
+				<constant>JEEVA02</constant>
+			</setHeader>
+			<setHeader name="branchCode">
+				<constant>PK2</constant>
+			</setHeader>
+			<setHeader name="appId">
+				<constant>OBTFPMLETTERCREDITDS</constant>
+			</setHeader>
+			
+			<!--  transform>
+				<method ref="transformer" method="mapToString" />
+			</transform>
+			<log message="JSON string after transformation: " />
+			<log message="${body}" />-->
+			
+			<transform>
+				<method ref="transformer" method="mapToJsonString" />
+			</transform>
+			<log message="JSON string after transformation mapToJsonString :::" />
+			<log message="${body}" />
+			
+			<!-- setProperty name="letterOfCreditDetails">
+				<simple>${body.letterOfCreditDetails}</simple> 
+			</setProperty-->
+			
+			<log message="LC Request :::" />
+			<log message="${body}" />
+			<to uri="http://10.40.137.113:8003/tradeFinance/obtfpm-letterofcredits-datasegments-services/v1/letterofcredits/?bridgeEndpoint=true" />
+			<log message="LC Response :::" />
+			<log message="${body}" />
+			<setBody>
+				<simple>${exchangeProperty[message]}</simple>
+			</setBody> 
+			
+			<setHeader name="appId">
+				<constant>OBTFPMCOMMONDS</constant>
+			</setHeader>
+			
+			<transform>
+				<method ref="transformer" method="mapToJsonPartyDetails" />
+			</transform>
+			<log message="PARTY DETAILS mapToJsonPartyDetails :::" />
+			<log message="${body}" />
+			
+			<to uri="http://10.40.137.113:8003/tradeFinance/obtfpm-common-datasegments-services/v1/parties/?bridgeEndpoint=true"  />		
+			<log message="party Response :::" />
+			<log message="${body}" />
+			
+			<setBody>
+				<simple>${exchangeProperty[message]}</simple>
+			</setBody> 
+			
+			<setHeader name="appId">
+				<constant>CMNCORE</constant>
+			</setHeader>
+				<transform>
+				<method ref="transformer" method="mapToJsonTxnControllerDetails" />
+			</transform>
+			<log message="mapToJsonTxnControllerDetails :::" />
+			<log message="${body}" />
+			
+			
+			<!--  to uri="http://10.40.137.113:8004/cmc-transactioncontroller-services/web/v1/transactioncontroller/PK2ILCI000042530/dsstatus/fsgbu-ob-tfpm-vp-ilcimain?bridgeEndpoint=true" />	-->		
+			
+			<!--  rest path="http://10.40.137.113:8004/cmc-transactioncontroller-services/web/v1/transactioncontroller/">-->
+			<!--  to method="put" uri="http://10.40.137.113:8004/cmc-transactioncontroller-services/web/v1/transactioncontroller/PK2ILCI000042530/dsstatus/fsgbu-ob-tfpm-vp-ilcimain?bridgeEndpoint=true"/>-->
+				<!--  to uri="direct:txncontroller" />
+			</post>-->
+		<!--  /rest>-->
+			<log message="TxnControllerDetails Response :::" />
+			<log message="${body}" />
+			
+			<!--  put type="org.apache.camel.example.rest.User">
+       		 	<description>Updates or create a user</description>
+       			 <to uri="bean:userService?method=updateUser"/>
+     		 </put-->
+			
+			
+			<!--  to uri="http://10.40.137.113:8003/tradeFinance/obtfpm-datasegments-management-services/v1/transaction-management-services?bridgeEndpoint=true" />
+			<log message="Datasegment Response :::" />
+			<log message="${body}"/>-->
+		</route>
+		
+		
+			<route id="obtfpm - ILCISS TXN CONTROLLER" >
+			<from uri="direct:txncontroller" />
+			<!-- {"additionalAttributes":{"uiKey":"fsgbu-ob-tfpm-ds-additional-fields@ILCISS","dataReferenceKey":"PK2ILCI000042278","fieldMetaDataVersion":"1","applicationId":"OBTFPM","fieldData":"{}"},"processCode":"ILCISS","domainId":"d2e73034-8228-4965-9ce3-8b9f8af794de","eventCode":"TFPM_FA_ILCISS_REGTN","workflowId":"93797e4f-11fe-41a9-91ca-1fa27bdc63e4","taskId":"0c8b86a3-2009-4062-9b09-b46d4017e62c","applicationCategoryCode":"ILCISS","taskOutcome":"PROCEED","overrideAccept":false,"dataSegmentName":"Main Details","dataSegmentCode":"fsgbu-ob-tfpm-vp-ilcimain","applicationNumber":"PK2ILCI000042278","hopId":"MAIN","letterOfCreditDetails":{"id":"d2e73034-8228-4965-9ce3-8b9f8af794de","applicationNumber":"PK2ILCI000042278","processCode":"ILCISS","branchCode":"PK2","limitTrackingRequired":"Y","branchName":"FLEXCUBE UNIVERSAL BANK","receivedFromApplicantBank":"N","counterpartyId":"001044","counterpartyName":"GOODCARE PLC","currencyCode":"GBP","amount":9000,"priority":"M","submissionMode":"Desk","applicationDate":"2019-03-22","counterpartyReferenceNumber":"","lcType":"","revolvingType":"N","productCode":"","formOfDocumentaryCredit":"IRREVOCABLE","documentaryCreditNumber":"","contractRefNo":"","issueDate":"2019-03-22","lcApplicableRule":"UCP LATEST VERSION","expiryDate":null,"placeOfExpiry":"","tolerence":null,"positiveTolerance":"","negativeTolerance":"","additionalAmountCovered":"","copyExtLC":"N","copyDCN":""},"partyDetails":[{"id":"","partyType":"APP","partyId":"001044","partyName":"GOODCARE PLC","swiftCode":"","addressLine1":"12 King Street","addressLine2":null,"addressLine3":null,"addressLine4":null,"city":null,"mediumType":"SWIFT","country":"GB","recordStat":"W","isPartyBlacklisted":"N","customerType":"C","isWalkin":false}],"txnCmnDetails":null} -->
+			<log message="${body}" />
+			</route>
+		<!--  route id="obtfpm - ILCISS PARTY DETAILS" >
+		<from uri="direct:obtfpm" />
+			<log message="LC Response :::" />
+			<log message="${body}" />
+			
+			<transform>
+				<method ref="transformer" method="mapToJsonPartyDetails" />
+			</transform>
+			<log message="JSON string after transformation mapToJsonPartyDetails :::" />
+			<log message="${body}" />
+			
+		</route>-->
+		
+		<!-- <route id="P1 main: MT103 HYIn TableOut Update Notification Processor"> 
+			<from uri="direct:P1Request" /> 
+			<log message="Inside P1 route: " />
+			<log message="${body}" />
+			<setProperty name="propertyDB">
+	        	<simple>${body}</simple>
+	        </setProperty>   
+			<setBody>	
+		 		<simple>
+		 			{"direction":"I", "log_time":"${date:now:yyyy-MM-dd HH:mm:ss}", "camel_route_id": "${routeId}", "payload":"${body}", "data_ref_key": "${body[id]}"}
+		 		</simple>
+		 	</setBody>
+		 	<to uri="direct:OfbaCamelLog" />
+			<setBody><simple>${exchangeProperty[propertyDB]}</simple></setBody>
+			<transform> 
+				<method ref="transformer" method="transformKeyValue" /> 
+			</transform> 
+			<log message="After transform: " /> 
+			<log message="${body}" /> 
+			<to uri="sqlComponent:{{sql.updateQueryP1}}" /> 
+			<to uri="sqlComponent:{{sql.commitSql}}" />
+			<setBody><simple>{"status":"OK"}</simple></setBody>
+			<transform> 
+				<method ref="transformer" method="stringToMap" /> 
+			</transform>
+			<log message="Successful P1!!!" ></log>
+			<onException>
+				<exception>java.lang.Exception</exception> 
+				<redeliveryPolicy maximumRedeliveries="1"/> 
+				<handled><constant>true</constant></handled>
+				<setProperty name="propertyRouteId"><simple>${routeId}</simple></setProperty>
+				<to uri="direct:Common_Exceptions" />
+			</onException>
+		</route> -->
+		
+		
+	</camelContext>
+</beans>  
